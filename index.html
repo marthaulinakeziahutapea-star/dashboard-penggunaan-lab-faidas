@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Penggunaan Laboratorium FAIDAS</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--navy:#202b50;--purple:#6556a5;--lav:#eeeafd;--bg:#f5f6fb;--ink:#24283b;--muted:#70758a;--white:#fff}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(120deg,#202b50,#6556a5);color:white;padding:30px 5vw}
+header .eyebrow{font-size:12px;letter-spacing:2px;opacity:.8;text-transform:uppercase}
+h1{margin:9px 0;font-size:clamp(24px,4vw,36px)}header p{margin:0;color:#e6e3fa}
+main{max-width:1200px;margin:26px auto;padding:0 20px}
+.filters{display:flex;gap:14px;flex-wrap:wrap;background:white;padding:18px;border-radius:14px;box-shadow:0 4px 18px #202b5010;margin-bottom:18px}
+.field{display:flex;flex-direction:column;gap:7px;min-width:155px;flex:1}
+label{font-size:12px;font-weight:bold;color:var(--muted)}
+select,input{padding:11px;border:1px solid #d9dbea;border-radius:8px;background:white;color:var(--ink);font-size:14px}
+button{border:0;background:var(--purple);color:white;padding:11px 16px;border-radius:8px;cursor:pointer;align-self:end}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.card,.panel{background:white;border-radius:14px;padding:20px;box-shadow:0 4px 18px #202b5010}
+.card span{color:var(--muted);font-size:13px}.card strong{display:block;font-size:30px;color:var(--navy);margin-top:8px}
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:18px}
+.panel h2{font-size:17px;margin:0 0 16px;color:var(--navy)}
+.chart-wrap{height:280px;position:relative}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:11px;border-bottom:1px solid #ececf3;white-space:nowrap}
+th{background:#f5f3fc;color:var(--navy)}
+.note{color:var(--muted);font-size:12px;line-height:1.5;margin:18px 2px}
+@media(max-width:700px){.cards{grid-template-columns:1fr}.charts{grid-template-columns:1fr}.chart-wrap{height:250px}header{padding:25px 20px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">Dashboard interaktif</div>
+  <h1>Penggunaan Laboratorium FAIDAS</h1>
+  <p>Ringkasan kegiatan dan jam penggunaan laboratorium</p>
+</header>
+<main>
+  <section class="filters">
+    <div class="field"><label for="ruang">KODE RUANGAN</label><select id="ruang"><option value="Semua">Semua Laboratorium</option><option>Lab 1</option><option>Lab 2</option><option>Lab 3</option></select></div>
+    <div class="field"><label for="jenis">JENIS PENGGUNAAN</label><select id="jenis"><option value="Semua">Semua Jenis</option><option>Praktikum</option><option>Training</option><option>Workshop</option></select></div>
+    <div class="field"><label for="mulai">TANGGAL MULAI</label><input id="mulai" type="date" value="2026-09-01"></div>
+    <div class="field"><label for="akhir">TANGGAL AKHIR</label><input id="akhir" type="date" value="2026-09-30"></div>
+    <button id="reset">Reset Filter</button>
+  </section>
+
+  <section class="cards">
+    <div class="card"><span>Total Kegiatan</span><strong id="kegiatan">54</strong></div>
+    <div class="card"><span>Total Jam Penggunaan</span><strong id="jam">180</strong></div>
+    <div class="card"><span>Jumlah Laboratorium</span><strong id="lab">3</strong></div>
+  </section>
+
+  <section class="charts">
+    <div class="panel"><h2>Total Kegiatan per Laboratorium</h2><div class="chart-wrap"><canvas id="chartKegiatan"></canvas></div></div>
+    <div class="panel"><h2>Total Jam per Laboratorium</h2><div class="chart-wrap"><canvas id="chartJam"></canvas></div></div>
+    <div class="panel"><h2>Total Kegiatan per Jenis</h2><div class="chart-wrap"><canvas id="chartJenis"></canvas></div></div>
+    <div class="panel"><h2>Komposisi Jenis Penggunaan</h2><div class="chart-wrap"><canvas id="chartPie"></canvas></div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Rincian Data Kegiatan</h2>
+    <div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Ruangan</th><th>Jenis</th><th>Nama Kegiatan</th><th>Jam</th><th>Jumlah</th></tr></thead><tbody id="dataRows"></tbody></table></div>
+  </section>
+  <p class="note">Catatan: Data ini merupakan data contoh untuk latihan, sesuai keterangan pada file Excel sumber. Gunakan filter untuk melihat ringkasan berdasarkan laboratorium, jenis penggunaan, dan rentang tanggal.</p>
+</main>
+<script>
+const data = [{"tanggal": "2026-09-01", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #1", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-01", "ruang": "Lab 1", "jenis": "Training", "nama": "Training Lab 1 #3", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-03", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #2", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-03", "ruang": "Lab 1", "jenis": "Training", "nama": "Training Lab 1 #4", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-05", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #3", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-05", "ruang": "Lab 1", "jenis": "Workshop", "nama": "Workshop Lab 1 #1", "jam": 5, "jumlah": 1}, {"tanggal": "2026-09-07", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #4", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-07", "ruang": "Lab 1", "jenis": "Workshop", "nama": "Workshop Lab 1 #2", "jam": 5, "jumlah": 1}, {"tanggal": "2026-09-09", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #5", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-11", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #6", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-13", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #7", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-15", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #8", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-17", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #9", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-19", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #10", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-21", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #11", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-23", "ruang": "Lab 1", "jenis": "Praktikum", "nama": "Praktikum Lab 1 #12", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-25", "ruang": "Lab 1", "jenis": "Training", "nama": "Training Lab 1 #1", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-27", "ruang": "Lab 1", "jenis": "Training", "nama": "Training Lab 1 #2", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-02", "ruang": "Lab 2", "jenis": "Training", "nama": "Training Lab 2 #4", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-04", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #1", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-04", "ruang": "Lab 2", "jenis": "Training", "nama": "Training Lab 2 #5", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-06", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #2", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-06", "ruang": "Lab 2", "jenis": "Training", "nama": "Training Lab 2 #6", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-08", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #3", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-08", "ruang": "Lab 2", "jenis": "Workshop", "nama": "Workshop Lab 2 #1", "jam": 5, "jumlah": 1}, {"tanggal": "2026-09-10", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #4", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-10", "ruang": "Lab 2", "jenis": "Workshop", "nama": "Workshop Lab 2 #2", "jam": 5, "jumlah": 1}, {"tanggal": "2026-09-12", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #5", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-12", "ruang": "Lab 2", "jenis": "Workshop", "nama": "Workshop Lab 2 #3", "jam": 5, "jumlah": 1}, {"tanggal": "2026-09-14", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #6", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-16", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #7", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-18", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #8", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-20", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #9", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-22", "ruang": "Lab 2", "jenis": "Praktikum", "nama": "Praktikum Lab 2 #10", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-24", "ruang": "Lab 2", "jenis": "Training", "nama": "Training Lab 2 #1", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-26", "ruang": "Lab 2", "jenis": "Training", "nama": "Training Lab 2 #2", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-28", "ruang": "Lab 2", "jenis": "Training", "nama": "Training Lab 2 #3", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-01", "ruang": "Lab 3", "jenis": "Training", "nama": "Training Lab 3 #4", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-03", "ruang": "Lab 3", "jenis": "Training", "nama": "Training Lab 3 #5", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-05", "ruang": "Lab 3", "jenis": "Workshop", "nama": "Workshop Lab 3 #1", "jam": 5, "jumlah": 1}, {"tanggal": "2026-09-07", "ruang": "Lab 3", "jenis": "Praktikum", "nama": "Praktikum Lab 3 #1", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-07", "ruang": "Lab 3", "jenis": "Workshop", "nama": "Workshop Lab 3 #2", "jam": 5, "jumlah": 1}, {"tanggal": "2026-09-09", "ruang": "Lab 3", "jenis": "Praktikum", "nama": "Praktikum Lab 3 #2", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-09", "ruang": "Lab 3", "jenis": "Workshop", "nama": "Workshop Lab 3 #3", "jam": 5, "jumlah": 1}, {"tanggal": "2026-09-11", "ruang": "Lab 3", "jenis": "Praktikum", "nama": "Praktikum Lab 3 #3", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-11", "ruang": "Lab 3", "jenis": "Workshop", "nama": "Workshop Lab 3 #4", "jam": 5, "jumlah": 1}, {"tanggal": "2026-09-13", "ruang": "Lab 3", "jenis": "Praktikum", "nama": "Praktikum Lab 3 #4", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-15", "ruang": "Lab 3", "jenis": "Praktikum", "nama": "Praktikum Lab 3 #5", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-17", "ruang": "Lab 3", "jenis": "Praktikum", "nama": "Praktikum Lab 3 #6", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-19", "ruang": "Lab 3", "jenis": "Praktikum", "nama": "Praktikum Lab 3 #7", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-21", "ruang": "Lab 3", "jenis": "Praktikum", "nama": "Praktikum Lab 3 #8", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-23", "ruang": "Lab 3", "jenis": "Training", "nama": "Training Lab 3 #1", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-25", "ruang": "Lab 3", "jenis": "Training", "nama": "Training Lab 3 #2", "jam": 3, "jumlah": 1}, {"tanggal": "2026-09-27", "ruang": "Lab 3", "jenis": "Training", "nama": "Training Lab 3 #3", "jam": 3, "jumlah": 1}];
+const labs = ["Lab 1","Lab 2","Lab 3"];
+const types = ["Praktikum","Training","Workshop"];
+const colors = ["#6556a5","#e3a64b","#4f9d91"];
+const rupiah = n => n.toLocaleString("id-ID");
+const ctx = id => document.getElementById(id).getContext("2d");
+const common = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
+const kegiatanChart = new Chart(ctx("chartKegiatan"),{type:"bar",data:{labels:labs,datasets:[{data:[0,0,0],backgroundColor:colors,borderRadius:7}]},options:{...common,scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+const jamChart = new Chart(ctx("chartJam"),{type:"bar",data:{labels:labs,datasets:[{data:[0,0,0],backgroundColor:colors,borderRadius:7}]},options:{...common,scales:{y:{beginAtZero:true}}}});
+const jenisChart = new Chart(ctx("chartJenis"),{type:"bar",data:{labels:types,datasets:[{data:[0,0,0],backgroundColor:colors,borderRadius:7}]},options:{...common,scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+const pieChart = new Chart(ctx("chartPie"),{type:"doughnut",data:{labels:types,datasets:[{data:[0,0,0],backgroundColor:colors}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}});
+function update(){
+ const room=document.getElementById("ruang").value, type=document.getElementById("jenis").value;
+ const start=document.getElementById("mulai").value, end=document.getElementById("akhir").value;
+ const filtered=data.filter(x=>(room==="Semua"||x.ruang===room)&&(type==="Semua"||x.jenis===type)&&(!start||x.tanggal>=start)&&(!end||x.tanggal<=end));
+ const countBy=(key,value)=>filtered.filter(x=>x[key]===value).reduce((s,x)=>s+Number(x.jumlah||0),0);
+ const hoursBy=(key,value)=>filtered.filter(x=>x[key]===value).reduce((s,x)=>s+Number(x.jam||0),0);
+ const total=filtered.reduce((s,x)=>s+Number(x.jumlah||0),0), hours=filtered.reduce((s,x)=>s+Number(x.jam||0),0);
+ document.getElementById("kegiatan").textContent=rupiah(total);
+ document.getElementById("jam").textContent=rupiah(hours);
+ document.getElementById("lab").textContent=room==="Semua"?String(new Set(filtered.map(x=>x.ruang)).size):(filtered.length?1:0);
+ kegiatanChart.data.datasets[0].data=labs.map(v=>countBy("ruang",v)); kegiatanChart.update();
+ jamChart.data.datasets[0].data=labs.map(v=>hoursBy("ruang",v)); jamChart.update();
+ jenisChart.data.datasets[0].data=types.map(v=>countBy("jenis",v)); jenisChart.update();
+ pieChart.data.datasets[0].data=types.map(v=>countBy("jenis",v)); pieChart.update();
+ const tbody=document.getElementById("dataRows"); tbody.innerHTML="";
+ filtered.forEach(x=>{const tr=document.createElement("tr"); [x.tanggal,x.ruang,x.jenis,x.nama,x.jam,x.jumlah].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.appendChild(td)});tbody.appendChild(tr)});
+ if(!filtered.length){tbody.innerHTML='<tr><td colspan="6">Tidak ada data untuk filter ini.</td></tr>'}
+}
+["ruang","jenis","mulai","akhir"].forEach(id=>document.getElementById(id).addEventListener("change",update));
+document.getElementById("reset").addEventListener("click",()=>{document.getElementById("ruang").value="Semua";document.getElementById("jenis").value="Semua";document.getElementById("mulai").value="2026-09-01";document.getElementById("akhir").value="2026-09-30";update()});
+update();
+</script>
+</body>
+</html>
